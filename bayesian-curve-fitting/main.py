@@ -90,7 +90,7 @@ def visualize_fit_data(x_values, y_values, y_errors, foo, args_fit, args_true):
 	plt.show()
 
 
-def bayesian_curve_fit(x_values, y_values, y_errors, foo, prior_bounds, npoints):
+def bayesian_curve_fit(x_values, y_values, y_errors, foo, prior_bounds, npoints, plot=False):
 	"""
 	Perform bayesian inference to determine best fit parameters,
 	assuming that measurement errors are gaussian distributed
@@ -123,14 +123,45 @@ def bayesian_curve_fit(x_values, y_values, y_errors, foo, prior_bounds, npoints)
 	posterior = np.exp(exp_argument)
 	
 	# Determine generalized volume element
+	deltas = []
 	element = 1
-	for i in range(get_num_arguments(foo)):
-		element *= priors[i][1] - priors[i][0]
+
+	for i, prior in enumerate(priors):
+
+		deltas.append(prior[1] - prior[0])
+		element *= deltas[i]
 
 	# Normalize!
 	posterior /= np.sum(posterior) * element
 
 	# Marginalize for each parameter
+	args_fit = []
+	for i, prior in enumerate(priors):
+
+		marginalized = posterior
+
+		for j, (size, delta) in enumerate(zip(prior_points, deltas)):
+
+			# Don't marginalize what we want
+			if i == j:
+				continue
+
+			axis = np.where(np.asarray(marginalized.shape) == size)[0][0]
+			marginalized = np.sum(marginalized, axis=axis) * delta
+
+		# Record best fit value
+		index = np.argmax(marginalized)
+		args_fit.append(prior[index])
+
+		if plot:
+			# Plot parameter
+			fig = plt.figure(figsize=(16, 9))
+			ax = fig.add_subplot((111))
+			ax.plot(prior, marginalized)
+			plt.show()
+
+	return args_fit
+
 
 if __name__ == '__main__':
 
@@ -146,11 +177,10 @@ if __name__ == '__main__':
 	
 	# Come up with bounds on our estimates
 	prior_bounds = [[-10, 10], [-10, 10], [-10, 10]]
-	npoints = 21
+	npoints = 100
 	
 	# Bayesian curve fit the data
 	args_fit = bayesian_curve_fit(x_values, y_values, y_error, quadratic, prior_bounds, npoints)
-	exit()
 	
 	# Visualize the results
 	visualize_fit_data(x_values, y_values, y_error, quadratic, args_fit, args_true)
