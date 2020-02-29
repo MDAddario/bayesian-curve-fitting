@@ -60,7 +60,7 @@ def plot_error_bars(axes, xvals, yvals, yerr, color='r', ecolor='k',
 	axes.scatter(xvals, yvals, s=s, color=color)
 
 
-def visualize_fit_data(x_values, y_values, y_errors, foo, args_fit, args_true):
+def visualize_fit_data(x_values, y_values, y_errors, foo, args_fit, args_true, filename=None):
 	"""
 	Plot data set and associated best fit
 	"""
@@ -87,6 +87,8 @@ def visualize_fit_data(x_values, y_values, y_errors, foo, args_fit, args_true):
 
 	# Final touches
 	plt.legend(framealpha=1.0, fontsize=18)
+	if filename is not None:
+		plt.savefig(filename)
 	plt.show()
 
 
@@ -98,16 +100,16 @@ def bayesian_curve_fit(x_values, y_values, y_errors, foo, prior_bounds, npoints,
 	# Upgrade error input to a list if only one error provided
 	if not isinstance(y_errors, (list, tuple)):
 		y_errors = [y_errors] * len(x_values)
-	
+
 	# Compute uniform priors
 	prior_points = []
 	priors = []
-	
+
 	for i, (start, end) in enumerate(prior_bounds):
 
 		prior_points.append(npoints + i)
 		priors.append(np.linspace(start, end, prior_points[i]))
-	
+
 	# Create mesh grids for each parameter
 	arg_grids = np.meshgrid(*priors)
 
@@ -121,7 +123,7 @@ def bayesian_curve_fit(x_values, y_values, y_errors, foo, prior_bounds, npoints,
 		exp_argument -= np.square(y_val - y_fit) / 2 / np.square(y_err)
 
 	posterior = np.exp(exp_argument)
-	
+
 	# Determine generalized volume element
 	deltas = []
 	element = 1
@@ -174,14 +176,13 @@ if __name__ == '__main__':
 	y_error = 1
 
 	x_values, y_values = generate_random_data(quadratic, args_true, y_error, start, end, npoints)
-	
+
 	# Come up with bounds on our estimates
 	prior_bounds = [[-10, 10], [-10, 10], [-10, 10]]
 	npoints = 100
-	
-	# Bayesian curve fit the data
-	args_fit = bayesian_curve_fit(x_values, y_values, y_error, quadratic, prior_bounds, npoints)
-	
-	# Visualize the results
-	visualize_fit_data(x_values, y_values, y_error, quadratic, args_fit, args_true)
 
+	# Bayesian curve fit the data
+	args_fit = bayesian_curve_fit(x_values, y_values, y_error, quadratic, prior_bounds, npoints, plot=False)
+
+	# Visualize the results
+	visualize_fit_data(x_values, y_values, y_error, quadratic, args_fit, args_true, filename='output.pdf')
